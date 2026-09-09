@@ -1,0 +1,20 @@
+.DS_Store
+__pycache__/
+*.pyc
+
+# Local competition documents and extracted text.
+*.docx
+*.wps
+*.txt
+!glioma_seg_baseline/requirements.txt
+
+# Data, model outputs, and platform work directories.
+BraTS*/
+brats*/
+nnUNet_raw/
+nnUNet_preprocessed/
+nnUNet_results/
+checkpoints/
+logs/
+answer/
+outputs/
