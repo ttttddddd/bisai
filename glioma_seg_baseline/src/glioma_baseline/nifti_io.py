@@ -5,6 +5,30 @@ import subprocess
 from pathlib import Path
 
 
+def check_nifti(path: Path) -> bool:
+    """Return True when a NIfTI image exists and can be opened."""
+    path = Path(path)
+    if not path.is_file():
+        return False
+    try:
+        import nibabel as nib
+
+        img = nib.load(str(path))
+        _ = img.shape
+        _ = img.affine
+        return True
+    except Exception:
+        pass
+    try:
+        import SimpleITK as sitk
+
+        img = sitk.ReadImage(str(path))
+        _ = img.GetSize()
+        return True
+    except Exception:
+        return False
+
+
 def copy_zero_mask_like(reference_image: Path, output_mask: Path) -> None:
     """Create an all-zero NIfTI mask with the same geometry as reference_image."""
     output_mask.parent.mkdir(parents=True, exist_ok=True)
@@ -45,6 +69,15 @@ def ensure_binary_mask(mask_path: Path) -> None:
     nib.save(nib.Nifti1Image(data, img.affine, img.header), str(mask_path))
 
 
+def mask_voxel_count(mask_path: Path) -> int:
+    try:
+        import nibabel as nib
+    except Exception:
+        return 0
+    img = nib.load(str(mask_path))
+    return int((img.get_fdata() > 0).sum())
+
+
 def copy_or_compress_nifti(src: Path, dst: Path) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
     if src.resolve() == dst.resolve():
@@ -58,4 +91,3 @@ def command_exists(name: str) -> bool:
 
 def run_checked(cmd: list[str]) -> None:
     subprocess.run(cmd, check=True)
-

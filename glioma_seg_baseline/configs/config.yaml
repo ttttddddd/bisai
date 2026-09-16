@@ -1,0 +1,22 @@
+paths:
+  answer_root: /2026aicompetition/workspace/answer
+  log_dir: /2026aicompetition/workspace/logs
+
+service:
+  host: 0.0.0.0
+  port: 8000
+  callback_url: ""
+
+nnunet:
+  core_dataset_id: 401
+  total_dataset_id: 402
+  trainer: nnUNetTrainer
+  configuration: 3d_fullres
+  fold: "0"
+  checkpoint: checkpoint_final.pth
+
+inference:
+  validate_nifti: false
+  fallback_to_zero_mask: true
+  duplicate_topk: 20
+

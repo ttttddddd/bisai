@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from .nifti_io import check_nifti
+
 
 NIFTI_SUFFIXES = (".nii", ".nii.gz")
 
@@ -58,7 +60,7 @@ def _score_t2(text: str) -> int:
     return score
 
 
-def discover_series(dataset_path: Path) -> dict[str, list[SeriesImage]]:
+def discover_series(dataset_path: Path, validate_nifti: bool = False) -> dict[str, list[SeriesImage]]:
     """Find NIfTI images under a competition-style dataset directory.
 
     The expected competition layout is usually:
@@ -74,9 +76,17 @@ def discover_series(dataset_path: Path) -> dict[str, list[SeriesImage]]:
         for path in sorted(accession_dir.rglob("*")):
             if not path.is_file() or not is_nifti(path):
                 continue
+            if validate_nifti and not check_nifti(path):
+                continue
             rel = path.relative_to(accession_dir)
             series_uid = rel.parts[0] if len(rel.parts) > 1 else path.stem.replace(".nii", "")
-            description = " ".join([series_uid, path.name])
+            # In the official-like layout the preferred file is usually
+            # AccessionNumber/SeriesUid/SeriesUid.nii(.gz). Other NIfTI files
+            # under the same series are still accepted for local mock data.
+            if len(rel.parts) > 1 and path.stem.replace(".nii", "") != series_uid:
+                description = " ".join([series_uid, path.parent.name, path.name])
+            else:
+                description = " ".join([series_uid, path.name])
             series.append(SeriesImage(accession, series_uid, path, description))
         if series:
             studies[accession] = series
@@ -94,4 +104,3 @@ def select_flair_or_t2(series: list[SeriesImage]) -> SeriesImage | None:
         return flair_ranked[0]
     t2_ranked = sorted(series, key=lambda s: _score_t2(f"{s.description} {s.image_path}"), reverse=True)
     return t2_ranked[0] if t2_ranked and _score_t2(f"{t2_ranked[0].description} {t2_ranked[0].image_path}") > 0 else None
-

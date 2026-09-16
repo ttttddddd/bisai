@@ -16,9 +16,11 @@
 ## 目录内容
 
 - `src/glioma_baseline/sequence_select.py`：根据文件名和序列描述识别 T1CE、FLAIR、T2。
+- `configs/config.yaml`：统一配置 answer/log 路径、nnU-Net 数据集编号、服务端口和回调地址。
 - `src/glioma_baseline/prediction_json.py`：生成比赛要求的 `prediction.json` 骨架。
 - `src/glioma_baseline/nnunet_runner.py`：调用 nnU-Net v2 命令行做预测。
 - `src/glioma_baseline/service.py`：比赛推理服务，提供 `/health` 和 `/call`。
+- `scripts/validate_competition_dataset.py`：检查平台数据中病例、序列、NIfTI 和 T1CE/FLAIR/T2 候选情况。
 - `tools/brats_to_nnunet_single_modal.py`：用 BraTS 构造两个 nnU-Net 小数据集。
 - `scripts/train_nnunet_baseline.sh`：训练 Core/Total 两套 nnU-Net。
 - `scripts/start_service.sh`：启动比赛推理服务。
@@ -90,6 +92,20 @@ bash glioma_seg_baseline/scripts/train_nnunet_baseline.sh
 bash glioma_seg_baseline/scripts/start_service.sh
 ```
 
+启动脚本默认读取：
+
+```text
+glioma_seg_baseline/configs/config.yaml
+```
+
+也可以通过环境变量覆盖核心路径：
+
+```bash
+export ANSWER_BASE=/2026aicompetition/workspace/answer
+export CALLBACK_URL=http://平台回调地址/api/competition/inference/callback/
+bash glioma_seg_baseline/scripts/start_service.sh
+```
+
 服务要求：
 
 - `GET /health` 返回 200。
@@ -99,10 +115,29 @@ bash glioma_seg_baseline/scripts/start_service.sh
   - `{AccessionNumber}/prediction.json`
   - `{AccessionNumber}/{SeriesUid}/{SeriesUid}.nii.gz`
 
+## 平台数据检查
+
+在正式训练或推理前，先检查平台数据结构：
+
+```bash
+python glioma_seg_baseline/scripts/validate_competition_dataset.py \
+  --dataset-path /2026aicompetition/datasets/training/annotation \
+  --output-csv /2026aicompetition/workspace/logs/td_segment_dataset_check.csv
+```
+
+如果想进一步检查 NIfTI 文件是否能打开，加：
+
+```bash
+--validate-nifti
+```
+
+这个脚本会统计每个 AccessionNumber 下找到多少序列，以及规则能否选出 T1CE 和 FLAIR/T2。
+
 ## 重要限制
 
 这是一版跑通基线，不是最终比赛模型：
 
 - 分类字段目前是合规占位值，用来保证输出结构完整。
 - 如果找不到训练好的 nnU-Net checkpoint，服务会输出全 0 mask，保证格式不炸，但没有分割能力。
+- 服务参考了完整 baseline 的后台推理和数据校验思路：单个病例失败会写日志并继续处理其他病例。
 - 真正上分需要完成 BraTS/自造数据训练，并补充分类模型。
