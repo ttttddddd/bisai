@@ -78,6 +78,17 @@ def mask_voxel_count(mask_path: Path) -> int:
     return int((img.get_fdata() > 0).sum())
 
 
+def is_same_geometry(reference_image: Path, candidate_image: Path) -> bool:
+    try:
+        import nibabel as nib
+        import numpy as np
+    except Exception:
+        return True
+    ref = nib.load(str(reference_image))
+    cand = nib.load(str(candidate_image))
+    return ref.shape == cand.shape and np.allclose(ref.affine, cand.affine, atol=1e-3)
+
+
 def copy_or_compress_nifti(src: Path, dst: Path) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
     if src.resolve() == dst.resolve():

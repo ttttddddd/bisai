@@ -7,6 +7,12 @@ from pathlib import Path
 
 DEFAULT_CONFIG = {
     "paths": {
+        "annotation_root": "/2026aicompetition/datasets/training/annotation",
+        "label_root": "/2026aicompetition/datasets/training/label",
+        "nnunet_src": "/2026aicompetition/public_models/MIC-DKFZ/nnUNet",
+        "nnunet_raw": "/2026aicompetition/workspace/nnUNet_raw",
+        "nnunet_preprocessed": "/2026aicompetition/workspace/nnUNet_preprocessed",
+        "nnunet_results": "/2026aicompetition/workspace/nnUNet_results",
         "answer_root": "/2026aicompetition/workspace/answer",
         "log_dir": "/2026aicompetition/workspace/logs",
     },
@@ -86,6 +92,12 @@ def load_config(path: str | Path | None = None) -> dict:
             _deep_update(cfg, data)
 
     cfg["paths"]["answer_root"] = os.environ.get("ANSWER_BASE", cfg["paths"]["answer_root"])
+    cfg["paths"]["annotation_root"] = os.environ.get("ANNOTATION_ROOT", cfg["paths"]["annotation_root"])
+    cfg["paths"]["label_root"] = os.environ.get("LABEL_ROOT", cfg["paths"]["label_root"])
+    cfg["paths"]["nnunet_src"] = os.environ.get("NNUNET_SRC", cfg["paths"]["nnunet_src"])
+    cfg["paths"]["nnunet_raw"] = os.environ.get("nnUNet_raw", cfg["paths"]["nnunet_raw"])
+    cfg["paths"]["nnunet_preprocessed"] = os.environ.get("nnUNet_preprocessed", cfg["paths"]["nnunet_preprocessed"])
+    cfg["paths"]["nnunet_results"] = os.environ.get("nnUNet_results", cfg["paths"]["nnunet_results"])
     cfg["service"]["callback_url"] = os.environ.get("CALLBACK_URL", cfg["service"]["callback_url"])
     cfg["nnunet"]["core_dataset_id"] = int(os.environ.get("CORE_DATASET_ID", cfg["nnunet"]["core_dataset_id"]))
     cfg["nnunet"]["total_dataset_id"] = int(os.environ.get("TOTAL_DATASET_ID", cfg["nnunet"]["total_dataset_id"]))

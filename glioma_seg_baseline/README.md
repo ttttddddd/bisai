@@ -1,88 +1,108 @@
 # 赛道四脑胶质瘤病灶分割基线
 
-这个目录是一版“先跑通”的赛道四分割工程。它以比赛公共模型中的 nnU-Net v2 为基线，先做两个独立分割模型：
+这是面向比赛平台的“先跑通”分割工程，当前不依赖 BraTS，默认直接读取云平台训练标注数据和公共模型路径。
 
-- Core 模型：输入 T1CE/T1WI+C，输出核心区二值 mask。
-- Total Abnormal 模型：输入 FLAIR，缺失时退到 T2，输出总异常区二值 mask。
+## 目标
 
-这样设计的原因是比赛规则明确要求：
+赛道四的分割部分可以先拆成两个二值分割任务：
 
-- 核心区 mask 必须和对应 T1 增强原始影像保持相同空间维度和 affine。
-- 总异常区 mask 必须和对应 FLAIR/T2 原始影像保持相同空间维度和 affine。
-- mask 体素值只能是 0 或 1。
+- Core：输入 T1CE/T1WI+C，输出核心区 mask。
+- Total Abnormal：输入 FLAIR；如果 FLAIR 缺失，退到 T2，输出总异常区 mask。
 
-第一版先保证数据、训练、推理、提交格式能跑通；后续再加入多模态配准、分类模型和集成。
+第一版目标不是追求最高精度，而是先把平台数据读取、nnU-Net 训练、推理服务和结果输出跑通。
+
+## 默认平台路径
+
+代码默认使用以下路径：
+
+```text
+训练标注数据：/2026aicompetition/datasets/training/annotation
+训练标签表：  /2026aicompetition/datasets/training/label
+公共 nnU-Net：/2026aicompetition/public_models/MIC-DKFZ/nnUNet
+nnU-Net raw： /2026aicompetition/workspace/nnUNet_raw
+模型输出：    /2026aicompetition/workspace/nnUNet_results
+提交结果：    /2026aicompetition/workspace/answer
+日志目录：    /2026aicompetition/workspace/logs
+```
+
+这些默认值写在 `configs/config.yaml`，也可以用环境变量覆盖。
 
 ## 目录内容
 
-- `src/glioma_baseline/sequence_select.py`：根据文件名和序列描述识别 T1CE、FLAIR、T2。
-- `configs/config.yaml`：统一配置 answer/log 路径、nnU-Net 数据集编号、服务端口和回调地址。
-- `src/glioma_baseline/prediction_json.py`：生成比赛要求的 `prediction.json` 骨架。
-- `src/glioma_baseline/nnunet_runner.py`：调用 nnU-Net v2 命令行做预测。
+- `configs/config.yaml`：平台路径、服务端口、nnU-Net 数据集编号。
+- `tools/platform_to_nnunet.py`：把平台训练标注数据转换成 nnU-Net v2 数据集。
+- `scripts/prepare_platform_nnunet_data.sh`：一键生成 401/402 两个训练数据集。
+- `scripts/train_nnunet_baseline.sh`：安装/调用公共 nnU-Net，并训练两个分割模型。
+- `scripts/validate_competition_dataset.py`：检查平台病例、序列和候选 T1CE/FLAIR/T2。
 - `src/glioma_baseline/service.py`：比赛推理服务，提供 `/health` 和 `/call`。
-- `scripts/validate_competition_dataset.py`：检查平台数据中病例、序列、NIfTI 和 T1CE/FLAIR/T2 候选情况。
-- `tools/brats_to_nnunet_single_modal.py`：用 BraTS 构造两个 nnU-Net 小数据集。
-- `scripts/train_nnunet_baseline.sh`：训练 Core/Total 两套 nnU-Net。
-- `scripts/start_service.sh`：启动比赛推理服务。
+- `src/glioma_baseline/sequence_select.py`：按序列描述/文件名选择 T1CE、FLAIR、T2。
+- `src/glioma_baseline/prediction_json.py`：生成 `prediction.json`。
 
-## 先用 BraTS 构造小样本
+## 先检查平台数据
 
-BraTS 常见结构：
-
-```text
-BraTS-GLI-00001-000/
-  BraTS-GLI-00001-000-t1n.nii.gz
-  BraTS-GLI-00001-000-t1c.nii.gz
-  BraTS-GLI-00001-000-t2w.nii.gz
-  BraTS-GLI-00001-000-t2f.nii.gz
-  BraTS-GLI-00001-000-seg.nii.gz
-```
-
-转换命令：
+在云平台容器里进入仓库后运行：
 
 ```bash
-python glioma_seg_baseline/tools/brats_to_nnunet_single_modal.py \
-  --brats-root /path/to/BraTS \
-  --out-root /2026aicompetition/workspace/nnUNet_raw \
-  --num-cases 8
+python glioma_seg_baseline/scripts/validate_competition_dataset.py \
+  --dataset-path /2026aicompetition/datasets/training/annotation \
+  --output-csv /2026aicompetition/workspace/logs/td_segment_dataset_check.csv
 ```
 
-输出：
+如果要检查 NIfTI 文件是否能打开，加：
 
-- `Dataset401_GliomaCoreT1CE`
-- `Dataset402_GliomaTotalFLAIR`
+```bash
+--validate-nifti
+```
 
-标签映射：
+这个检查会告诉你每个病例下有多少序列，以及当前规则能否选出 T1CE 和 FLAIR/T2。
 
-- Core = BraTS TC = `seg == 1 or seg == 4`
-- Total Abnormal = BraTS WT = `seg > 0`
+## 生成 nnU-Net 训练数据
+
+```bash
+bash glioma_seg_baseline/scripts/prepare_platform_nnunet_data.sh
+```
+
+默认输出：
+
+```text
+/2026aicompetition/workspace/nnUNet_raw/Dataset401_GliomaCoreT1CE
+/2026aicompetition/workspace/nnUNet_raw/Dataset402_GliomaTotalFLAIR
+```
+
+转换逻辑：
+
+- Core 数据集优先选择 T1CE/T1WI+C 序列。
+- Total Abnormal 数据集优先选择 FLAIR，缺失时退到 T2。
+- 如果平台标签表里能读到 `AccessionNumber`、`SeriesUid`、`Maskname`、`Task/SeriesLabel` 等字段，就按表格定位 mask。
+- 如果标签表不可用，就在对应病例/序列目录里按文件名关键词兜底寻找 mask。
+- 默认跳过没有找到 mask 的病例，避免把未知病例当阴性训练。
+
+少量样本调试可设置：
+
+```bash
+MAX_CASES=8 bash glioma_seg_baseline/scripts/prepare_platform_nnunet_data.sh
+```
+
+只想测试流程但没有 mask 时，可以临时生成空 mask：
+
+```bash
+INCLUDE_EMPTY=1 MAX_CASES=2 bash glioma_seg_baseline/scripts/prepare_platform_nnunet_data.sh
+```
+
+注意：`INCLUDE_EMPTY=1` 只能用于检查流程，不能用于正式训练。
 
 ## 训练
-
-在云平台中，优先使用比赛提供的 nnU-Net：
-
-```text
-/2026aicompetition/public_models/MIC-DKFZ/nnUNet
-```
-
-训练前设置 nnU-Net 路径：
-
-```bash
-export nnUNet_raw=/2026aicompetition/workspace/nnUNet_raw
-export nnUNet_preprocessed=/2026aicompetition/workspace/nnUNet_preprocessed
-export nnUNet_results=/2026aicompetition/workspace/nnUNet_results
-```
-
-然后运行：
 
 ```bash
 bash glioma_seg_baseline/scripts/train_nnunet_baseline.sh
 ```
 
-默认会依次训练：
+脚本会：
 
-- Dataset 401：Core
-- Dataset 402：Total Abnormal
+1. 设置 nnU-Net 工作目录。
+2. 如果找不到 `nnUNetv2_*` 命令，就从 `/2026aicompetition/public_models/MIC-DKFZ/nnUNet` 安装。
+3. 如果 401/402 数据集不存在，先自动生成。
+4. 依次训练 Core 和 Total Abnormal 两个模型。
 
 ## 推理服务
 
@@ -92,52 +112,29 @@ bash glioma_seg_baseline/scripts/train_nnunet_baseline.sh
 bash glioma_seg_baseline/scripts/start_service.sh
 ```
 
-启动脚本默认读取：
+服务接口：
+
+- `GET /health`：返回服务状态。
+- `POST /call`：接收平台请求，后台推理。
+
+推理输出目录：
 
 ```text
-glioma_seg_baseline/configs/config.yaml
+/2026aicompetition/workspace/answer/{evaluation_id}
 ```
 
-也可以通过环境变量覆盖核心路径：
+每个病例会输出：
 
-```bash
-export ANSWER_BASE=/2026aicompetition/workspace/answer
-export CALLBACK_URL=http://平台回调地址/api/competition/inference/callback/
-bash glioma_seg_baseline/scripts/start_service.sh
+```text
+{AccessionNumber}/prediction.json
+{AccessionNumber}/{SeriesUid}/{SeriesUid}_core.nii.gz
+{AccessionNumber}/{SeriesUid}/{SeriesUid}_flair.nii.gz
 ```
 
-服务要求：
+如果模型 checkpoint 暂时不存在，服务会输出全 0 mask，保证提交格式先跑通；训练完成后会自动优先调用 nnU-Net 预测。
 
-- `GET /health` 返回 200。
-- `POST /call` 接收平台请求。
-- 推理结果写入 `/2026aicompetition/workspace/answer/{evaluation_id}`。
-- 每个病例输出：
-  - `{AccessionNumber}/prediction.json`
-  - `{AccessionNumber}/{SeriesUid}/{SeriesUid}.nii.gz`
+## 当前限制
 
-## 平台数据检查
-
-在正式训练或推理前，先检查平台数据结构：
-
-```bash
-python glioma_seg_baseline/scripts/validate_competition_dataset.py \
-  --dataset-path /2026aicompetition/datasets/training/annotation \
-  --output-csv /2026aicompetition/workspace/logs/td_segment_dataset_check.csv
-```
-
-如果想进一步检查 NIfTI 文件是否能打开，加：
-
-```bash
---validate-nifti
-```
-
-这个脚本会统计每个 AccessionNumber 下找到多少序列，以及规则能否选出 T1CE 和 FLAIR/T2。
-
-## 重要限制
-
-这是一版跑通基线，不是最终比赛模型：
-
-- 分类字段目前是合规占位值，用来保证输出结构完整。
-- 如果找不到训练好的 nnU-Net checkpoint，服务会输出全 0 mask，保证格式不炸，但没有分割能力。
-- 服务参考了完整 baseline 的后台推理和数据校验思路：单个病例失败会写日志并继续处理其他病例。
-- 真正上分需要完成 BraTS/自造数据训练，并补充分类模型。
+- 这是单序列双模型基线：Core 用 T1CE，Total 用 FLAIR/T2；还不是最终多模态融合模型。
+- 平台真实序列可能是 UID 命名，序列选择高度依赖标签表或描述字段。
+- 分类/征象字段目前仍是占位值，后续需要由其他模块补齐。

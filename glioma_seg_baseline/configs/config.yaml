@@ -1,4 +1,10 @@
 paths:
+  annotation_root: /2026aicompetition/datasets/training/annotation
+  label_root: /2026aicompetition/datasets/training/label
+  nnunet_src: /2026aicompetition/public_models/MIC-DKFZ/nnUNet
+  nnunet_raw: /2026aicompetition/workspace/nnUNet_raw
+  nnunet_preprocessed: /2026aicompetition/workspace/nnUNet_preprocessed
+  nnunet_results: /2026aicompetition/workspace/nnUNet_results
   answer_root: /2026aicompetition/workspace/answer
   log_dir: /2026aicompetition/workspace/logs
 
@@ -19,4 +25,3 @@ inference:
   validate_nifti: false
   fallback_to_zero_mask: true
   duplicate_topk: 20
-

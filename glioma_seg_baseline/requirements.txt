@@ -1,4 +1,6 @@
 numpy
 nibabel
 PyYAML
+pandas
+openpyxl
 nnunetv2
