@@ -176,24 +176,47 @@ def union_masks(mask_paths: list[Path], reference_image: Path, output_mask: Path
     try:
         import nibabel as nib
         import numpy as np
-    except Exception as exc:
-        raise RuntimeError("Merging platform masks requires nibabel.") from exc
 
-    ref = nib.load(str(reference_image))
-    merged = np.zeros(ref.shape, dtype=np.uint8)
+        ref = nib.load(str(reference_image))
+        merged = np.zeros(ref.shape, dtype=np.uint8)
+        used = 0
+        for mask_path in mask_paths:
+            if not is_same_geometry(reference_image, mask_path):
+                continue
+            mask = nib.load(str(mask_path)).get_fdata() > 0
+            if mask.shape != merged.shape:
+                continue
+            merged[mask] = 1
+            used += 1
+        if used == 0:
+            return False
+        output_mask.parent.mkdir(parents=True, exist_ok=True)
+        nib.save(nib.Nifti1Image(merged, ref.affine, ref.header), str(output_mask))
+        return True
+    except Exception:
+        pass
+
+    try:
+        import SimpleITK as sitk
+    except Exception as exc:
+        raise RuntimeError("Merging platform masks requires nibabel or SimpleITK.") from exc
+
+    ref = sitk.ReadImage(str(reference_image))
+    merged = sitk.Image(ref.GetSize(), sitk.sitkUInt8)
+    merged.CopyInformation(ref)
     used = 0
     for mask_path in mask_paths:
         if not is_same_geometry(reference_image, mask_path):
             continue
-        mask = nib.load(str(mask_path)).get_fdata() > 0
-        if mask.shape != merged.shape:
+        mask = sitk.ReadImage(str(mask_path))
+        if mask.GetSize() != ref.GetSize():
             continue
-        merged[mask] = 1
+        merged = sitk.Or(merged, sitk.Cast(mask > 0, sitk.sitkUInt8))
         used += 1
     if used == 0:
         return False
     output_mask.parent.mkdir(parents=True, exist_ok=True)
-    nib.save(nib.Nifti1Image(merged, ref.affine, ref.header), str(output_mask))
+    sitk.WriteImage(merged, str(output_mask))
     return True
 
 

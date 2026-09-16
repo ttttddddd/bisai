@@ -3,4 +3,5 @@ nibabel
 PyYAML
 pandas
 openpyxl
+SimpleITK
 nnunetv2

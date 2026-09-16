@@ -82,11 +82,26 @@ def is_same_geometry(reference_image: Path, candidate_image: Path) -> bool:
     try:
         import nibabel as nib
         import numpy as np
+
+        ref = nib.load(str(reference_image))
+        cand = nib.load(str(candidate_image))
+        return ref.shape == cand.shape and np.allclose(ref.affine, cand.affine, atol=1e-3)
+    except Exception:
+        pass
+
+    try:
+        import SimpleITK as sitk
+
+        ref = sitk.ReadImage(str(reference_image))
+        cand = sitk.ReadImage(str(candidate_image))
+        return (
+            ref.GetSize() == cand.GetSize()
+            and ref.GetSpacing() == cand.GetSpacing()
+            and ref.GetOrigin() == cand.GetOrigin()
+            and ref.GetDirection() == cand.GetDirection()
+        )
     except Exception:
         return True
-    ref = nib.load(str(reference_image))
-    cand = nib.load(str(candidate_image))
-    return ref.shape == cand.shape and np.allclose(ref.affine, cand.affine, atol=1e-3)
 
 
 def copy_or_compress_nifti(src: Path, dst: Path) -> None:
