@@ -5,7 +5,7 @@ export nnUNet_raw="${nnUNet_raw:-/2026aicompetition/workspace/nnUNet_raw}"
 export nnUNet_preprocessed="${nnUNet_preprocessed:-/2026aicompetition/workspace/nnUNet_preprocessed}"
 export nnUNet_results="${nnUNet_results:-/2026aicompetition/workspace/nnUNet_results}"
 export ANNOTATION_ROOT="${ANNOTATION_ROOT:-/2026aicompetition/datasets/training/annotation}"
-export LABEL_ROOT="${LABEL_ROOT:-/2026aicompetition/datasets/training/label}"
+export LABEL_ROOT="${LABEL_ROOT:-$ANNOTATION_ROOT}"
 
 NNUNET_SRC="${NNUNET_SRC:-/2026aicompetition/public_models/MIC-DKFZ/nnUNet}"
 LOG_DIR="${LOG_DIR:-/2026aicompetition/workspace/logs}"

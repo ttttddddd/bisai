@@ -8,7 +8,7 @@ from pathlib import Path
 DEFAULT_CONFIG = {
     "paths": {
         "annotation_root": "/2026aicompetition/datasets/training/annotation",
-        "label_root": "/2026aicompetition/datasets/training/label",
+        "label_root": "/2026aicompetition/datasets/training/annotation",
         "nnunet_src": "/2026aicompetition/public_models/MIC-DKFZ/nnUNet",
         "nnunet_raw": "/2026aicompetition/workspace/nnUNet_raw",
         "nnunet_preprocessed": "/2026aicompetition/workspace/nnUNet_preprocessed",
@@ -30,6 +30,7 @@ DEFAULT_CONFIG = {
         "checkpoint": "checkpoint_final.pth",
     },
     "inference": {
+        "dataset_root": "/2026aicompetition/datasets/verification/original",
         "validate_nifti": False,
         "fallback_to_zero_mask": True,
         "duplicate_topk": 20,
@@ -99,6 +100,7 @@ def load_config(path: str | Path | None = None) -> dict:
     cfg["paths"]["nnunet_preprocessed"] = os.environ.get("nnUNet_preprocessed", cfg["paths"]["nnunet_preprocessed"])
     cfg["paths"]["nnunet_results"] = os.environ.get("nnUNet_results", cfg["paths"]["nnunet_results"])
     cfg["service"]["callback_url"] = os.environ.get("CALLBACK_URL", cfg["service"]["callback_url"])
+    cfg["inference"]["dataset_root"] = os.environ.get("DATASET_ROOT", cfg["inference"]["dataset_root"])
     cfg["nnunet"]["core_dataset_id"] = int(os.environ.get("CORE_DATASET_ID", cfg["nnunet"]["core_dataset_id"]))
     cfg["nnunet"]["total_dataset_id"] = int(os.environ.get("TOTAL_DATASET_ID", cfg["nnunet"]["total_dataset_id"]))
     return cfg

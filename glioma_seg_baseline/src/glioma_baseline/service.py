@@ -154,7 +154,9 @@ class InferenceHandler(BaseHTTPRequestHandler):
             request_id = payload["request_id"]
             input_data = payload["input"]
             evaluation_id = str(input_data.get("evaluation_id") or input_data["evaluationId"])
-            dataset_path = input_data["dataset_path"]
+            dataset_path = input_data.get("dataset_path") or CFG["inference"].get("dataset_root")
+            if not dataset_path:
+                raise KeyError("dataset_path")
         except Exception:
             self.send_error(400, "invalid request body")
             return

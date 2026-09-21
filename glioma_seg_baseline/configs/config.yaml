@@ -1,6 +1,6 @@
 paths:
   annotation_root: /2026aicompetition/datasets/training/annotation
-  label_root: /2026aicompetition/datasets/training/label
+  label_root: /2026aicompetition/datasets/training/annotation
   nnunet_src: /2026aicompetition/public_models/MIC-DKFZ/nnUNet
   nnunet_raw: /2026aicompetition/workspace/nnUNet_raw
   nnunet_preprocessed: /2026aicompetition/workspace/nnUNet_preprocessed
@@ -22,6 +22,7 @@ nnunet:
   checkpoint: checkpoint_final.pth
 
 inference:
+  dataset_root: /2026aicompetition/datasets/verification/original
   validate_nifti: false
   fallback_to_zero_mask: true
   duplicate_topk: 20

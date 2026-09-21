@@ -15,10 +15,11 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from glioma_baseline.nifti_io import copy_zero_mask_like, is_same_geometry  # noqa: E402
 from glioma_baseline.sequence_select import SeriesImage, discover_series, select_flair_or_t2, select_t1ce  # noqa: E402
+from glioma_baseline.xlsx_reader import read_xlsx_rows  # noqa: E402
 
 
 CORE_TERMS = ("core", "t1ce", "t1c", "tumor", "enhance", "瘤体", "肿瘤核心", "核心")
-TOTAL_TERMS = ("total", "abnormal", "flair", "t2", "edema", "whole", "异常", "水肿", "全肿瘤")
+TOTAL_TERMS = ("total", "abnormal", "flair", "t2", "edema", "whole", "异常", "水肿", "全肿瘤", "瘤体")
 IMAGE_TERMS = ("image", "img", "series", "t1", "t2", "flair")
 
 
@@ -65,12 +66,10 @@ def load_table(path: Path) -> list[dict[str, str]]:
     if path.suffix.lower() == ".csv":
         with path.open("r", encoding="utf-8-sig", newline="") as f:
             return [dict(row) for row in csv.DictReader(f)]
-    if path.suffix.lower() in (".xlsx", ".xls"):
-        try:
-            import pandas as pd
-        except Exception as exc:
-            raise RuntimeError("Reading Excel labels requires pandas and openpyxl.") from exc
-        return pd.read_excel(path).fillna("").astype(str).to_dict("records")
+    if path.suffix.lower() == ".xlsx":
+        return read_xlsx_rows(path)
+    if path.suffix.lower() == ".xls":
+        raise RuntimeError("Legacy .xls files require an external reader; use .xlsx or .csv.")
     return []
 
 
@@ -276,7 +275,7 @@ def build_dataset(
 def main() -> None:
     parser = argparse.ArgumentParser(description="Convert platform glioma annotation data to nnU-Net v2 datasets.")
     parser.add_argument("--annotation-root", default="/2026aicompetition/datasets/training/annotation", type=Path)
-    parser.add_argument("--label-root", default="/2026aicompetition/datasets/training/label", type=Path)
+    parser.add_argument("--label-root", default="/2026aicompetition/datasets/training/annotation", type=Path)
     parser.add_argument("--label-file", default=None, type=Path)
     parser.add_argument("--out-root", default="/2026aicompetition/workspace/nnUNet_raw", type=Path)
     parser.add_argument("--max-cases", default=0, type=int)

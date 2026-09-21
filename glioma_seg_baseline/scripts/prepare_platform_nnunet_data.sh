@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 export ANNOTATION_ROOT="${ANNOTATION_ROOT:-/2026aicompetition/datasets/training/annotation}"
-export LABEL_ROOT="${LABEL_ROOT:-/2026aicompetition/datasets/training/label}"
+export LABEL_ROOT="${LABEL_ROOT:-$ANNOTATION_ROOT}"
 export nnUNet_raw="${nnUNet_raw:-/2026aicompetition/workspace/nnUNet_raw}"
 
 MAX_CASES="${MAX_CASES:-0}"

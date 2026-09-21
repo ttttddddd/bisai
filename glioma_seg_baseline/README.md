@@ -17,7 +17,8 @@
 
 ```text
 训练标注数据：/2026aicompetition/datasets/training/annotation
-训练标签表：  /2026aicompetition/datasets/training/label
+训练标签表：  /2026aicompetition/datasets/training/annotation
+正式验证数据：/2026aicompetition/datasets/verification/original
 公共 nnU-Net：/2026aicompetition/public_models/MIC-DKFZ/nnUNet
 nnU-Net raw： /2026aicompetition/workspace/nnUNet_raw
 模型输出：    /2026aicompetition/workspace/nnUNet_results
@@ -73,6 +74,10 @@ bash glioma_seg_baseline/scripts/prepare_platform_nnunet_data.sh
 
 - Core 数据集优先选择 T1CE/T1WI+C 序列。
 - Total Abnormal 数据集优先选择 FLAIR，缺失时退到 T2。
+- 如果数据根目录存在 `SeriesType.xlsx`，会使用官方 `AccessionNumber + SeriesUid + SeriesType` 映射，并优先于文件名推断。
+- 读取 `SeriesType.xlsx` 只使用 Python 标准库，不需要 `pandas` 或 `openpyxl`，适合无网容器。
+- 原始影像与 mask 同目录时，`*_mask.nii.gz`、“肿瘤瘤体”、“全肿瘤”、“水肿”文件不会被误当为输入影像。
+- 平台的 `SeriesType.xlsx` 和结构化标注表均位于 `training/annotation`，转换脚本默认从该目录读取。
 - 如果平台标签表里能读到 `AccessionNumber`、`SeriesUid`、`Maskname`、`Task/SeriesLabel` 等字段，就按表格定位 mask。
 - 如果标签表不可用，就在对应病例/序列目录里按文件名关键词兜底寻找 mask。
 - 默认跳过没有找到 mask 的病例，避免把未知病例当阴性训练。
